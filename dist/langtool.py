@@ -10,7 +10,7 @@ def handle_missing_key(command, lang_data, key, value):
     if command == "check":
         print(f"Error: Translation {lang_data['code']} is missing translation for key '{key}'")
         exit(2)
-    elif command == "translate" or command == "create":
+    elif command in ["translate", "create"]:
         print(f"Key \033[1m'{key}': '{value}'\033[0m is missing in translation '{lang_data['code']}'")
         new_value = input("Enter translation: ")
         lang_data["translations"][key] = new_value
@@ -43,7 +43,7 @@ def main():
 
     print(f"Processing language files in {lang_folder_path}...")
 
-    default_lang_file_path = lang_folder_path / Path(DEFAULT_LANG + ".json")
+    default_lang_file_path = lang_folder_path / Path(f"{DEFAULT_LANG}.json")
     if not default_lang_file_path.exists():
         print(f"Error: Default language file {default_lang_file_path} does not exist")
         return 1
@@ -54,7 +54,7 @@ def main():
         default_lang_data = json.load(default_lang_file)
 
         if command == "create" and lang != "":
-            lang_file_path = lang_folder_path / Path(lang + ".json")
+            lang_file_path = lang_folder_path / Path(f"{lang}.json")
             if lang_file_path.exists():
                 print(f"Error: Language file {lang_file_path} already exists")
                 return 1
@@ -71,7 +71,7 @@ def main():
                 json.dump(new_lang_data, new_lang_file, indent=4, ensure_ascii=False)
 
         for additional_lang_file_path in lang_folder_path.glob("*.json"):
-            if not lang == "" and not additional_lang_file_path.stem == lang:
+            if lang != "" and additional_lang_file_path.stem != lang:
                 continue
 
             if additional_lang_file_path.name.startswith(DEFAULT_LANG):
@@ -86,11 +86,13 @@ def main():
                     if key not in additional_lang_data["translations"] or additional_lang_data["translations"][key] == INVALID_TRANSLATION:
                         handle_missing_key(command, additional_lang_data, key, value)
 
-                keys_to_remove = []
-                for key, value in additional_lang_data["translations"].items():
-                    if key not in default_lang_data["translations"]:
-                        keys_to_remove.append(key)
-
+                keys_to_remove = [
+                    key
+                    for key, value in additional_lang_data[
+                        "translations"
+                    ].items()
+                    if key not in default_lang_data["translations"]
+                ]
                 for key in keys_to_remove:
                     additional_lang_data["translations"].pop(key)
                     print(f"Removed unused key '{key}' from translation '{additional_lang_data['code']}'")
